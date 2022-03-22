@@ -1,0 +1,13 @@
+# report & google drive
+*.gdoc
+*.ini
+
+# simulink & Matlab BS
+*.asv
+*.slxc
+*/slprj/*
+
+# images
+*.png
+*.jpg
+*.gif
