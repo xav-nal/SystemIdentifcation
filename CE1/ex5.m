@@ -29,11 +29,38 @@ N = length(u)/P;
 FU = mean(fft(reshape(u, N, P), [], 1), 2);
 FY = mean(fft(reshape(simout.y.Data, N, P), [], 1), 2);
 
+FR = FY./FU;
+
 
 %% 3. Compute a frequency vector associated to the computed values
 
-f = linspace(0, (N-1)/N/Te, N);
-plot(f, abs(FY))
+f = linspace(0, 2*pi*(N-1)/N/Te, N);
 
 
 %% 4. Generate a frequency-domain model in Matlab 
+
+freq_model = frd(FR, f);
+
+
+%% 5. compare bode plot to true model 
+
+sys_disc     = c2d(tf([-1, 2], [1, 1.85, 4]), Te, 'zoh');
+
+figure()
+h = bodeplot(sys_disc, 'k', freq_model, 'r');
+setoptions(h, 'FreqUnits', 'Hz', 'PhaseUnits', 'Rad', 'ConfidenceRegionNumberSD', 3)
+title(sprintf("PRBS(%d,%d) Fourier Analysis", 8, P))
+legend("true freq. resp.", "identified freq. resp.", 'location', 'best')
+grid on
+
+
+%% for lols : impulse response 
+impulse_true = Te*impulse(sys_disc, T_end); % account for saturation and stuff
+
+figure()
+plot(time, impulse_true, 'k', LineWidth=1.5), hold on
+plot(time(1:N), real(ifft(FR)), 'r')
+legend("true system response",  sprintf("PRBS(%d,%d) fourier resp.", 8, P))
+title("Impulse response by Fourier Analysis methods")
+xlim(seconds([0, Te*N]))
+grid on
