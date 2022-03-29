@@ -15,6 +15,7 @@ P       = 8;   % [-]    number of periods in the PRBS
 
 %% 1. generate PRBS input signal and apply to system
 u       = u_sat * prbs(8, P);
+N       = length(u)/P;
 time    = seconds(Te*(0:(length(u)-1)))';
 T_end   = seconds(time(end));
 
@@ -24,12 +25,11 @@ simin  = timetable(time, u);
 simout = sim('model1');
 
 %% 2. compute the Fourier transform of the input and output signal
-N = length(u)/P;
 
 FU = mean(fft(reshape(u, N, P), [], 1), 2);
 FY = mean(fft(reshape(simout.y.Data, N, P), [], 1), 2);
 
-FR = FY./FU;
+FG = FY./FU;
 
 
 %% 3. Compute a frequency vector associated to the computed values
@@ -39,7 +39,7 @@ f = linspace(0, 2*pi*(N-1)/N/Te, N);
 
 %% 4. Generate a frequency-domain model in Matlab 
 
-freq_model = frd(FR, f);
+freq_model = frd(FG, f);
 
 
 %% 5. compare bode plot to true model 
@@ -59,7 +59,7 @@ impulse_true = Te*impulse(sys_disc, T_end); % account for saturation and stuff
 
 figure()
 plot(time, impulse_true, 'k', LineWidth=1.5), hold on
-plot(time(1:N), real(ifft(FR)), 'r')
+plot(time(1:N), ifft(FG), 'r')
 legend("true system response",  sprintf("PRBS(%d,%d) fourier resp.", 8, P))
 title("Impulse response by Fourier Analysis methods")
 xlim(seconds([0, Te*N]))
