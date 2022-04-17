@@ -39,7 +39,7 @@ f = linspace(0, 2*pi*(N-1)/N/Te, N);
 
 %% 4. Generate a frequency-domain model in Matlab 
 
-freq_model = frd(FG, f);
+freq_model = frd(FG(1:floor(N/2)), f(1:floor(N/2)));
 
 
 %% 5. compare bode plot to true model 

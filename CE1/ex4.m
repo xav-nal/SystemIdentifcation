@@ -62,8 +62,8 @@ fprintf("err2 for the xcorr  deconvolution : %f\n", err2_xcorr)
 %% plot
 
 plot(time, impulse_true, 'k', LineWidth=1.5), hold on
-plot(Te*h_i(idx_i), impulse_deconv_intcor,  'b', LineWidth=1)
-plot(Te*h_x(idx_x), impulse_deconv_xcorr, 'r')
+plot(Te*h_i(idx_i), impulse_deconv_intcor, 'b', LineWidth=1)
+plot(Te*h_x(idx_x), impulse_deconv_xcorr,  'r')
 
 legend("true system response",  sprintf("intcor (K=%d)", K), sprintf("xcorr (K=%d)", K))
 title("Impulse response by correlation methods")
