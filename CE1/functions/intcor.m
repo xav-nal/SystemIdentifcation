@@ -1,31 +1,39 @@
-function [R, h] = intcor(u, y, zero_pad)
+function varargout = intcor(u, y, zero_pad)
 %INTCOR [R, h] = intcor(u, y, zero_pad=false) 
 %   intercorrelation of u and y
 %   u and y must be similarly sized column-vectors
 %   R is the intercorrelation
-%   h is the shifts 
+%   h contains the shifts (zero-centered)
 
     N = length(u);
+
+    if nargin < 2
+        y = u;
+    end
     
     if (nargin > 2) && zero_pad
-        U = fft([u; zeros(size(u))]); % zero-pad signals
-        Y = fft([y; zeros(size(u))]);
-    else
-        U = fft(u); % don't zero-pad signals
-        Y = fft(y);
+        u = [u; zeros(size(u))]; % zero-pad signals
+        y = [y; zeros(size(u))];
     end
     
-    R = fftshift(ifft(U .* conj(Y), length(U), 1), 1) /N;
+    R = fftshift(ifft(fft(u,[],1) .* conj(fft(y,[],1)), length(u), 1), 1) /length(u); % fast
+%     R = fftshift(ifft(fft(u,[],1) .* ifft(y,[],1), [], 1), 1); % even faster, but floating-point errors
 
-    if length(U) > N 
-        h = linspace(-N, N-1, length(U)).';
-    else
-        if ~mod(N,2)
-            h = linspace(-N/2, N/2-1, length(U));
-        else 
-            h = linspace(1-ceil(N/2), floor(N/2), length(U));
+
+    if nargout > 1
+        if length(u) > N 
+            h = linspace(-N, N-1, length(u)).';
+        else
+            if ~mod(N,2)
+                h = linspace(-N/2, N/2-1, N);
+            else 
+                h = linspace(1-ceil(N/2), floor(N/2), N);
+            end
         end
-    end
 
+        varargout={R, h};
+    else
+        varargout={R};
+    end
 end
 
