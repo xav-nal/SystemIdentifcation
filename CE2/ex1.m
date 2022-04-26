@@ -13,9 +13,9 @@ addpath("data")
 %% 0. load data 
 
 load("data\laserbeamdataN2.mat")
-N       = length(u);
-fs      = 1e3; % [Hk]
-time    = seconds([0:N-1]/fs)';
+N       = length(u);            % [samples]
+fs      = 1e3;                  % [Hz]
+time    = seconds([0:N-1]/fs)'; % [s]
 
 %% 1. FIR model
 
