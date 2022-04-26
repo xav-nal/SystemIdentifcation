@@ -20,8 +20,7 @@ time    = seconds([0:N-1]/fs)';
 %% 1. FIR model
 
 K       = 50; % response length
-U       = toeplitz(u, [u(1), zeros(1, length(u)-1)]);
-Phi     = U(:, 1:K);
+Phi     = toeplitz(u, [u(1), zeros(1, K-1)]);
 
 % get the FIR predictor via LS algorithm
 theta   = (Phi.' * Phi)\(Phi.' * y);
@@ -59,4 +58,38 @@ grid on
 
 
 
+
 %% 2. ARX model
+
+Phi     = [[0; -y(1:end-1)], [ 0; 0; -y(1:end-2)], ...
+           [0;  u(1:end-1)], [ 0; 0;  u(1:end-2)] ];
+
+theta   = (Phi.' * Phi)\(Phi.' * y);
+
+y_hat   = Phi * theta;
+
+% loss function
+J       = sum((y - y_hat).^2);
+fprintf("the value of the loss function J is %.3f\n", J)
+
+% plot the predicted vs. true output
+figure(3), clf
+plot(time, y), hold on,
+plot(time, y_hat)
+legend("$y$",  sprintf('$\\hat{y}$ (K=%d)', K), 'Interpreter','latex')
+title("ARX Model output")
+ylabel("y")
+grid on
+
+%% simulate 
+G = tf([0 theta(3), theta(4)], [1 theta(1), theta(2)], 1/fs, 'Variable','z^-1');
+ym = lsim(G, u);
+
+figure(4), clf
+plot(time, y), hold on
+plot(time, ym)
+legend("$y$",  '$\hat{y}_m$', 'Interpreter','latex')
+title("lsim output")
+ylabel("y")
+grid on
+
