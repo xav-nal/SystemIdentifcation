@@ -1,5 +1,4 @@
 function git(varargin)
-%
 %GIT [args]
 %   Executes git commands through MATLAB command prompt.
 %   E.g.:
