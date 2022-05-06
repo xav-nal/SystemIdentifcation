@@ -106,4 +106,53 @@ make_fig(time, y_m_iv, labels, 4, "ARX and IV Model output")
 section('State Space Model')
 
 % construct matrices 
+r  = 200; % initial rank assumption
+% r  = 10;
+ny = 1;
+K  = length(u)+1-r;
+Y  = zeros(r, K);
+U  = zeros(r, K);
+for k = 1:K
+    Y(:,k) = y(k + (0:r-1));
+    U(:,k) = u(k + (0:r-1));
+end
 
+U_orth = eye(K) - U.'* ((U*U.') \ U);
+Q = Y*U_orth;
+n = rank(Q, norm(Q)/20); % rank() uses svd to estimate the rank
+% n = 2; % force rank 
+% n = 13; % force rank 
+make_fig([],[],[],"SVD of Q")
+scatter(1:r, svd(Q), "filled")
+xline(n, 'r')
+legend("singular values", sprintf("rank=%d", n))
+
+% extended observability matrix
+O = Q(:,1:n); 
+
+% compute state-space matrices
+C = O(1:ny,:);
+A = O(1:((r-1)*ny),:) \ O(ny+1:end,:);
+
+% compute input matrix
+q = tf('q', 1/fs);
+f = C/(q*eye(size(A)) - A);
+uf = zeros(length(time), n);
+for i = 1:n
+    uf(:,i) = lsim(f(i), u, seconds(time));
+end
+Phi = [uf, u].';
+
+theta = (y.'/Phi).';
+B = theta(1 : (end-size(u,2)));
+D = theta((end-size(u,2)+1) : end);
+
+G_SS = ss(A, B, C, D, 1/fs);
+
+
+% simulate using lsim, loss function & plot
+y_m_SS = lsim(G_SS, u);
+J = sum((y - y_m_SS).^2);
+fprintf("\tWhen simulating SS, the loss function J is  \t%7.3f\n", J)
+labels = {'$y$',  '$\hat{y}_{m, SS}$'};
+make_fig(time, [y, y_m_SS], labels, "SS Model output")
