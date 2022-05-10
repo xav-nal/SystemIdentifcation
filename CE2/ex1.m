@@ -51,8 +51,9 @@ make_fig(time, [y, y_hat], labels, "FIR Model output")
 
 % plot the impulse response 
 make_fig([], [], [], 2, "FIR Model impulse response")
-errorbar(time(1:K), theta, sigma_theta)
-legend('impulse response $\theta$', 'Interpreter','latex')
+errorshade(time(1:K), theta, 2*sigma_theta) % 95% confidence interval
+% errorbar(time(1:K), theta, 2*sigma_theta)
+legend('impulse response $\theta$', '$\sigma_{\theta}$ (95\% confidence)', 'Interpreter','latex')
 
 
 %% 2. ARX model

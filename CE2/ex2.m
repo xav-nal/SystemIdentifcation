@@ -1,5 +1,5 @@
 %% ---------------------------------
-%  model identifcation
+%  Parametric Identification
 %% ---------------------------------
 
 % paternoster 
@@ -39,11 +39,12 @@ end
 loss = cellfun(@(M) (M.EstimationInfo.LossFcn), model_arx);
 dloss = abs(diff(loss));
 n = find(dloss > .1*max(dloss), true, 'last');
+% n = 5; % override auto thingy
+fprintf("\tARX order estimated as %d\n", n)
 
 % plot loss function in function of order
-% figure()
 make_fig([],[],[], "ARX Order vs. Loss")
-bar(loss)
+scatter(1:length(loss), loss)
 xline(n, 'r')
 legend("loss", "estimated order")
 xlabel("order")
@@ -56,8 +57,10 @@ model_armax = cell(4,1);
 for n_check = (n-1):(n+2)
     model_armax{n_check-n+2} = armax(io_data, [n_check, n_check, n_check, 1]);
 
+    % check if there are any Zero/Pole cancellations -> this is done visually. 
+    % If there is a cancellation / near cancellation, we know the order is too high
     fig = figure();
-    fig.Name = sprintf("ARMAX order %d Zero/Poles", n_check);
+    fig.Name = sprintf("ARMAX order %d Zeroes/Poles", n_check);
     h = iopzplot(model_armax{n_check-n+2});
     showConfidence(h, 2);
     a = gca();
@@ -65,52 +68,108 @@ for n_check = (n-1):(n+2)
     % axis([-1, 1, -1, 1])
     axis equal
 end
+disp("please check the figures for Zero/Pole cancellation")
+
+%% estimate delay
+subsection 'estimate delay'
+
+% using the coefficients of B
+figure()
+errorshade(model_arx{n}.b, 2*model_arx{n}.db)
+legend('B', '$\sigma_B$ ((95\% confidence)', 'Interpreter','latex')
+% THERE IS ALWAYS ONE LEADING ZERO DUE TO THE SAMPLING DELAY : DO NOT COUNT IT 
+delay = find(abs(model_arx{n}.b(2:end)) < .1*max(abs(model_arx{n}.b)), true, 'last');
+if isempty(delay), delay = 0; end
+fprintf("\testimated delay is %d samples\n", delay)
+
+% estimation of nb 
+model_arx_nb = cell(n-1+1, 1);
+for nb = 1:n-1+1
+    model_arx_nb{nb} = arx(io_data, [n, nb, 1]);
+end
+loss = cellfun(@(M) (M.EstimationInfo.LossFcn), model_arx_nb);
+[~, nb] = min(loss);
+fprintf("\torder of nb for minimum loss is %d\n", nb)
+
+%% comparison using selstruc
+subsection 'comparison using selstruc'
+
+nn = struc(1:N_max, 1:N_max, 1:N_max);
+V = arxstruc(io_data, io_data, nn);
+nn = selstruc(V);
+fprintf("\tselected ARX model is: [%d, %d, %d]\n", nn)
+
+
+%% 2. Parametric Identification
+section 'Parametric Identification'
+
+% prepare data
+subsection 'divide data into identification / validation'
+split = round(3/4*length(y));
+idt_data = iddata(y(1:split), u(1:split), Ts, 'Name', 'Flexible Link Identification', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+val_data = iddata(y(split+1:end), u(split+1:end), Ts, 'Name', 'Flexible Link Validation', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+fprintf("\tdone\n")
+
+% other parametric models 
+na = nn(1);
+nb = nn(2);
+nk = nn(3);
+nc = na;
+nd = na;
+nf = na;
+na = 4;
+nb = 4;
+nk = 1;
+nc = na;
+nd = na;
+nf = na;
+
+subsection 'compare other parametric models '
+model_arx    = arx(idt_data, [na, nb, nk]);
+model_iv4    = iv4(idt_data, [na, nb, nk]);
+model_armax  = armax(idt_data, [na, nb, nc, nk]);
+model_oe     = oe(idt_data, [nb, nf, nk]);
+model_bj     = bj(idt_data, [nb, nc, nd, nf, nk]);
+model_n4sid  = n4sid(idt_data, n);
+
+fprintf("\tdone\n")
 
 
 
-%% delay
-% 
-% M30 = oe(io_data, [100, 0, 1]); % 30 parameters random
-% stairs(M30.b)
-% [M30.b(1:5); % values 
-%     2*M30.db(1:5)] % 2sigma (95% confidence, deviation of values 
-
-% THERE IS ALWAYS ONE LEADING ZERO DUE TO THE SAMPLING DELAY : DO NOT COUNT
-% IT 
+%% 3. Model Validation 
+section 'Model Validation'
 
 
+%% compare 
+subsection 'compare'
 
+figure(); 
+compare(val_data, ...
+        model_arx, ...
+        model_iv4, ...
+        model_armax, ...
+        model_oe, ...
+        model_bj, ...
+        model_n4sid) 
+fprintf("\tdone\n")
 
+%% frequency response 
+subsection 'frequency response'
 
+model_spa = spa(idt_data);
 
-%% 1. Parametric Identification
-section('Parametric Identification')
+fig = figure(); 
+compare(model_spa, ...
+        model_arx, ...
+        model_iv4, ...
+        model_armax, ...
+        model_oe, ...
+        model_bj, ...
+        model_n4sid) 
+fig.Children(3).String{1} = 'model\_spa';
 
+fprintf("\tdone\n")
 
-%% estimation of nb 
-% Mb2 = arx(Z, [3 2 2]), J2 = Mb2.EstimationInfo.LossFcn
-% Mb1 = arx(Z, [3 1 2]), J1 = Mb1.EstimationInfo.LossFcn
-% 
-% % chose the model which gives the smaller loss -> this is nb
-% 
-% %% estimation of na
-% % do the same but 
-% Mb2 = arx(Z, [1 2 2]), J2 = Mb2.EstimationInfo.LossFcn
-% Mb1 = arx(Z, [2 2 2]), J1 = Mb1.EstimationInfo.LossFcn
-% Mb1 = arx(Z, [3 2 2]), J1 = Mb1.EstimationInfo.LossFcn
-
-
-%% using struc
-% can identify 1000 models 
-% used to prepare structure alkfda lkdsjaéksfélsakdf ka a
-
-% N_max = 20;
-% nn = struc(1:N_max, 1:N_max, 1:N_max);
-% V = arxstruc(io_data, io_data, nn);
-% selstruc(V)
-
-% use the function 
-% figure(); compare(Z, model1, model2, model3) 
 
 
 % spectral analysis : spa(Z, 100) -> compare with Mspa as the first model
