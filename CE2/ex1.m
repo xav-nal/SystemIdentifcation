@@ -106,8 +106,8 @@ make_fig(time, y_m_iv, labels, 4, "ARX and IV Model output")
 section('State Space Model')
 
 % construct matrices 
-r  = 200; % initial rank assumption
-% r  = 10;
+% r  = 200; % initial rank assumption
+r  = 10; % initial rank assumption
 ny = 1;
 K  = length(u)+1-r;
 Y  = zeros(r, K);
@@ -118,7 +118,7 @@ for k = 1:K
 end
 
 U_orth = eye(K) - U.'* ((U*U.') \ U);
-Q = Y*U_orth;
+Q = Y*U_orth; 
 n = rank(Q, norm(Q)/20); % rank() uses svd to estimate the rank
 % n = 2; % force rank 
 % n = 13; % force rank 
@@ -147,10 +147,9 @@ theta = (y.'/Phi).';
 B = theta(1 : (end-size(u,2)));
 D = theta((end-size(u,2)+1) : end);
 
-G_SS = ss(A, B, C, D, 1/fs);
-
 
 % simulate using lsim, loss function & plot
+G_SS = ss(A, B, C, D, 1/fs);
 y_m_SS = lsim(G_SS, u);
 J = sum((y - y_m_SS).^2);
 fprintf("\tWhen simulating SS, the loss function J is  \t%7.3f\n", J)
