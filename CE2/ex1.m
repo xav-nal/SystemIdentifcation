@@ -48,11 +48,9 @@ sigma_theta = sigma_noise * sqrt(diag(inv(Phi.'*Phi)));
 labels = {'$y$',  sprintf('$\\hat{y}$ (K=%d)', K)};
 make_fig(time, [y, y_hat], labels, "FIR Model output")
 
-
 % plot the impulse response 
-make_fig([], [], [], 2, "FIR Model impulse response")
+make_fig([], [], [], "FIR Model impulse response")
 errorshade(time(1:K), theta, 2*sigma_theta) % 95% confidence interval
-% errorbar(time(1:K), theta, 2*sigma_theta)
 legend('impulse response $\theta$', '$\sigma_{\theta}$ (95\% confidence)', 'Interpreter','latex')
 
 
@@ -60,12 +58,17 @@ legend('impulse response $\theta$', '$\sigma_{\theta}$ (95\% confidence)', 'Inte
 section('ARX model')
 subsection('2nd order ARX')
 
+% make the I/O matrix
 Phi     = [[0; -y(1:end-1)], [ 0; 0; -y(1:end-2)], ...
            [0;  u(1:end-1)], [ 0; 0;  u(1:end-2)] ];
 
+% get the ARX predictor via LS algorithm
 theta   = (Phi.' * Phi)\(Phi.' * y);
 
+% predict the output using the I/O matrix
 y_hat   = Phi * theta;
+
+fprintf("\tThe ARX model is : (%.3f z^-1 %+.3f z^-2)/(1 %+.3f z^-1 %+.3f z^-2)\n", theta(3:4), theta(1:2))
 
 % loss function
 J       = sum((y - y_hat).^2);
@@ -88,9 +91,15 @@ make_fig(time, [y, ym], labels, "ARX lsim output")
 % instrumental variables method 
 subsection('IV model based on ARX')
 
+% make the I/O matrix based on the ARX model
 Phi_iv   = [[0; -ym(1:end-1)], [ 0; 0; -ym(1:end-2)], ...
             [0;  u(1:end-1)],  [ 0; 0;  u(1:end-2)] ]; 
+
+% get the IV predictor via LS algorithm
 theta_iv = (Phi_iv.' * Phi)\(Phi_iv.' * y);
+
+fprintf("\tThe IV model is : (%.3f z^-1 %+.3f z^-2)/(1 %+.3f z^-1 %+.3f z^-2)\n", theta_iv(3:4), theta_iv(1:2))
+
 
 % simulate using lsim, loss function & plot
 G_iv = tf([0 theta_iv(3), theta_iv(4)], [1 theta_iv(1), theta_iv(2)], 1/fs, 'Variable','z^-1');
@@ -107,7 +116,7 @@ make_fig(time, y_m_iv, labels, 4, "ARX and IV Model output")
 section('State Space Model')
 
 % construct matrices 
-% r  = 200; % initial rank assumption
+% r  = 200; % initial rank assumption -> overfit ? 
 r  = 10; % initial rank assumption
 ny = 1;
 K  = length(u)+1-r;
@@ -120,13 +129,14 @@ end
 
 U_orth = eye(K) - U.'* ((U*U.') \ U);
 Q = Y*U_orth; 
-n = rank(Q, norm(Q)/20); % rank() uses svd to estimate the rank
+n = rank(Q, norm(Q)/10); % rank() uses svd to estimate the rank
 % n = 2; % force rank 
 % n = 13; % force rank 
 make_fig([],[],[],"SVD of Q")
 scatter(1:r, svd(Q), "filled")
 xline(n, 'r')
 legend("singular values", sprintf("rank=%d", n))
+fprintf("The estimated rank is %d\n", n)
 
 % extended observability matrix
 O = Q(:,1:n); 

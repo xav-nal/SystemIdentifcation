@@ -32,8 +32,7 @@ function varargout = make_fig(varargin)
         legend(varargin{3}, 'Interpreter','latex');
     end
     ylabel("y")
-
-
+    xlim tight
     grid on
 
     if nargout > 0

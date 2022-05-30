@@ -26,10 +26,17 @@ end
 
 dt = mean(diff(XL(1:2:end)));
 
-C = colororder;
-plot([X; X(end)+dt], [Y;Y(end)]), hold on
-patch([XL; XL(end)+dt; XH(end)+dt; flip(XH)], [YL; YL(end); YH(end); flip(YH)], C(1,:), 'FaceAlpha',.3, 'EdgeColor', 'none')
+C = get(gca,'ColorOrder');
+c_idx = get(gca, 'ColorOrderIndex');
+
+plot([X; X(end)+dt], [Y;Y(end)]), hold on                                  % plot the mean estimation
+patch([XL; XL(end)+dt; XH(end)+dt; flip(XH)], ...                          % plot the std estimation
+      [YL; YL(end); YH(end); flip(YH)], ...
+      C(c_idx,:), 'FaceAlpha',.3, 'EdgeColor', 'none')
+
 hold off
+xlim tight
+grid on
 
 varargout = {};
 

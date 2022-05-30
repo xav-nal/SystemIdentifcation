@@ -22,9 +22,13 @@ fs      = 1/Ts;                 % [Hz]
 time    = seconds([0:N-1]/fs)'; % [s]
 
 y = detrend(y, 0);
-io_data = iddata(y, u, Ts, 'Name', 'Flexible Link', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+io_data = iddata(y, u, Ts, ...
+            'Name', 'Flexible Link', ...
+            'InputName', 'Current', ...
+            'OutputName', 'Motor Angle');
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 1. Order Estimation
 section 'Order Estimation'
 N_max = 10;
@@ -39,7 +43,7 @@ end
 loss = cellfun(@(M) (M.EstimationInfo.LossFcn), model_arx);
 dloss = abs(diff(loss));
 n = find(dloss > .1*max(dloss), true, 'last');
-% n = 5; % override auto thingy
+n = 8; % override auto thingy
 fprintf("\tARX order estimated as %d\n", n)
 
 % plot loss function in function of order
@@ -68,19 +72,25 @@ for n_check = (n-1):(n+2)
     % axis([-1, 1, -1, 1])
     axis equal
 end
-disp("please check the figures for Zero/Pole cancellation")
+fprintf("\tplease check the figures for Zero/Pole cancellation\n")
 
 %% estimate delay
 subsection 'estimate delay'
 
+model_oe = oe(io_data, [50, 0, 1]);
+
 % using the coefficients of B
-figure()
-errorshade(model_arx{n}.b, 2*model_arx{n}.db)
-legend('B', '$\sigma_B$ ((95\% confidence)', 'Interpreter','latex')
 % THERE IS ALWAYS ONE LEADING ZERO DUE TO THE SAMPLING DELAY : DO NOT COUNT IT 
-delay = find(abs(model_arx{n}.b(2:end)) < .1*max(abs(model_arx{n}.b)), true, 'last');
-if isempty(delay), delay = 0; end
-fprintf("\testimated delay is %d samples\n", delay)
+nk = find(abs(model_oe.b(2:end)) > .1*max(abs(model_oe.b)), true, 'first'); 
+
+if isempty(nk), nk = 0; end
+
+fprintf("\testimated delay is %d sample(s)\n", nk)
+
+figure()
+errorshade([0:(length(model_oe.b)-1)], model_oe.b, 2*model_oe.db)
+xline(nk, 'r')
+legend('B', '$\sigma_B$ (95\% confidence)', 'delay $n_k$', 'Interpreter','latex')
 
 % estimation of nb 
 model_arx_nb = cell(n-1+1, 1);
@@ -96,36 +106,42 @@ subsection 'comparison using selstruc'
 
 nn = struc(1:N_max, 1:N_max, 1:N_max);
 V = arxstruc(io_data, io_data, nn);
+
+% prompt user to select the model to use
 nn = selstruc(V);
 fprintf("\tselected ARX model is: [%d, %d, %d]\n", nn)
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 2. Parametric Identification
 section 'Parametric Identification'
 
 % prepare data
 subsection 'divide data into identification / validation'
 split = round(3/4*length(y));
-idt_data = iddata(y(1:split), u(1:split), Ts, 'Name', 'Flexible Link Identification', 'InputName', 'Current', 'OutputName', 'Motor Angle');
-val_data = iddata(y(split+1:end), u(split+1:end), Ts, 'Name', 'Flexible Link Validation', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+idt_data = iddata(detrend(y(1:split),0), u(1:split), Ts, 'Name', 'Flexible Link Identification', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+val_data = iddata(detrend(y(split+1:end),0), u(split+1:end), Ts, 'Name', 'Flexible Link Validation', 'InputName', 'Current', 'OutputName', 'Motor Angle');
 fprintf("\tdone\n")
 
 % other parametric models 
+subsection 'compare other parametric models '
+
 na = nn(1);
 nb = nn(2);
 nk = nn(3);
 nc = na;
 nd = na;
 nf = na;
-na = 4;
-nb = 4;
-nk = 1;
-nc = na;
-nd = na;
-nf = na;
+% na = 4;
+% nb = 4;
+% nk = 1;
+% nc = na;
+% nd = na;
+% nf = na;
 
-subsection 'compare other parametric models '
+
 model_arx    = arx(idt_data, [na, nb, nk]);
+% model_iv4    = iv4(idt_data, [na, nb, nk], iv4Options('EnforceStability', true));
 model_iv4    = iv4(idt_data, [na, nb, nk]);
 model_armax  = armax(idt_data, [na, nb, nc, nk]);
 model_oe     = oe(idt_data, [nb, nf, nk]);
@@ -166,11 +182,8 @@ compare(model_spa, ...
         model_oe, ...
         model_bj, ...
         model_n4sid) 
-fig.Children(3).String{1} = 'model\_spa';
+fig.Children(3).String{1} = 'Flexible Link Validation (Motor Angle)';
 
 fprintf("\tdone\n")
 
-
-
-% spectral analysis : spa(Z, 100) -> compare with Mspa as the first model
 
