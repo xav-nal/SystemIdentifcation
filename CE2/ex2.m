@@ -22,6 +22,7 @@ fs      = 1/Ts;                 % [Hz]
 time    = seconds([0:N-1]/fs)'; % [s]
 
 y = detrend(y, 0);
+% y = y - y(1);
 io_data = iddata(y, u, Ts, ...
             'Name', 'Flexible Link', ...
             'InputName', 'Current', ...
@@ -42,8 +43,8 @@ for n = 1:N_max
 end
 loss = cellfun(@(M) (M.EstimationInfo.LossFcn), model_arx);
 dloss = abs(diff(loss));
-n = find(dloss > .1*max(dloss), true, 'last');
-n = 8; % override auto thingy
+% n = find(dloss > .1*max(dloss), true, 'last');
+n = 6; % override auto thingy
 fprintf("\tARX order estimated as %d\n", n)
 
 % plot loss function in function of order
@@ -109,7 +110,13 @@ V = arxstruc(io_data, io_data, nn);
 
 % prompt user to select the model to use
 nn = selstruc(V);
-fprintf("\tselected ARX model is: [%d, %d, %d]\n", nn)
+
+if ~isempty(nn) 
+    fprintf("\tselected ARX model is: [%d, %d, %d]\n", nn)
+else 
+    fprintf("\tEnding program\n")
+    return;
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -118,9 +125,20 @@ section 'Parametric Identification'
 
 % prepare data
 subsection 'divide data into identification / validation'
-split = round(3/4*length(y));
-idt_data = iddata(detrend(y(1:split),0), u(1:split), Ts, 'Name', 'Flexible Link Identification', 'InputName', 'Current', 'OutputName', 'Motor Angle');
-val_data = iddata(detrend(y(split+1:end),0), u(split+1:end), Ts, 'Name', 'Flexible Link Validation', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+split_idx = round(3/4*length(y));
+
+% identification data
+idt_u = u(1:split_idx);
+idt_y = detrend(y(1:split_idx),0);
+% idt_y = idt_y - idt_y(1);
+idt_data = iddata(idt_y, idt_u , Ts, 'Name', 'Flexible Link Identification', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+
+% validation data
+val_u = u(split_idx+1:end);
+val_y = detrend(y(split_idx+1:end),0);
+% val_y = val_y - val_y(1);
+val_data = iddata(val_y, val_u , Ts, 'Name', 'Flexible Link Validation', 'InputName', 'Current', 'OutputName', 'Motor Angle');
+
 fprintf("\tdone\n")
 
 % other parametric models 
