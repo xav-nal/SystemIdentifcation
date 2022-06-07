@@ -21,7 +21,8 @@ The objective of the computer exercise sessions is to implement different algori
 | - functions             | MATLAB functions for the CE                                                                        |
 | - imgs                  | plots and screenshots taken from the CE                                                            |
 | - slpj                  | simulink stuff                                                                                     |
-| CE2                     | folder containing the computer exercises 2                                                         |
+| CE2                     | folder containing the computer exercises 2 
+| - data                  | dataset for the CE                                                                  |
 | - functions             | MATLAB functions for the CE                                                                        |
 | - imgs                  | plots and screenshots taken from the CE                                                            |
 
@@ -29,7 +30,7 @@ The objective of the computer exercise sessions is to implement different algori
 <!-- CONTACT -->
 ## Contact
 Biselx Michael - michael.biselx@epfl.ch    <br />
-[bdarbell](https://github.com/bdarbell)    <br />
+[greglcrx](https://github.com/greglcrx)    <br />
 [xav-nal](https://github.com/xav-nal)      <br />
 
 

@@ -91,7 +91,7 @@ impulse_true = Te*impulse(sys_disc, T_end); % account for saturation and stuff
 
 figure()
 plot(time, impulse_true, 'k', LineWidth=1.5), hold on
-plot(time(1:length(G1)), ifft(G1), 'r', time(1:length(G2)), ifft(G2), 'b', time(1:length(G3)), ifft(G3), 'g')
+plot(time(1:length(G1)), real(ifft(G1)), 'r', time(1:length(G2)), real(ifft(G2)), 'b', time(1:length(G3)), real(ifft(G3)), 'g')
 legend("true impulse resp.", "truncation impulse resp.", "Hann impulse resp.", "averaging impulse resp.", 'location', 'best')
 title("Impulse response by spectral analysis methods")
 xlim(seconds([0, 20]))
