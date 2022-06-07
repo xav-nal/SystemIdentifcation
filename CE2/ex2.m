@@ -245,9 +245,9 @@ else
         Rnorm  = R(:,1,1)./max(R(:,1,1));
         e      = std(Rnorm);
         if any(abs(Rnorm(2:end)) > 2*e)
-            is_OK{i} = "not OK";
+            is_OK{i} = ['[' 8 'not]' 8 ' OK'];
         else 
-            is_OK{i} = "OK";
+            is_OK{i} = 'OK';
         end
     end 
     fprintf("\t%s\n", sprintcells('%s is %s', {titles{:}}, is_OK));
