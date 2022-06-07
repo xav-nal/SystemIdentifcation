@@ -9,6 +9,8 @@ clc
 addpath("functions")
 addpath("data")
 
+plotting = false;
+% plotting = true;
 
 global sect_counter subsect_counter
 sect_counter = 0;
@@ -48,11 +50,13 @@ n = 6; % override auto thingy
 fprintf("\tARX order estimated as %d\n", n)
 
 % plot loss function in function of order
-make_fig([],[],[], "ARX Order vs. Loss")
-scatter(1:length(loss), loss)
-xline(n, 'r')
-legend("loss", "estimated order")
-xlabel("order")
+if plotting 
+    make_fig([],[],[], "ARX Order vs. Loss")
+    scatter(1:length(loss), loss)
+    xline(n, 'r')
+    legend("loss", "estimated order")
+    xlabel("order")
+end 
 
 
 %% ARMAX validation
@@ -64,14 +68,16 @@ for n_check = (n-1):(n+2)
 
     % check if there are any Zero/Pole cancellations -> this is done visually. 
     % If there is a cancellation / near cancellation, we know the order is too high
-    fig = figure();
-    fig.Name = sprintf("ARMAX order %d Zeroes/Poles", n_check);
-    h = iopzplot(model_armax{n_check-n+2});
-    showConfidence(h, 2);
-    a = gca();
-    a.Title.String = sprintf("%s (%s)", a.Title.String, fig.Name);
-    % axis([-1, 1, -1, 1])
-    axis equal
+    if plotting 
+        fig = figure();
+        fig.Name = sprintf("ARMAX order %d Zeroes/Poles", n_check);
+        h = iopzplot(model_armax{n_check-n+2});
+        showConfidence(h, 2);
+        a = gca();
+        a.Title.String = sprintf("%s (%s)", a.Title.String, fig.Name);
+        % axis([-1, 1, -1, 1])
+        axis equal
+    end 
 end
 fprintf("\tplease check the figures for Zero/Pole cancellation\n")
 
@@ -84,14 +90,16 @@ model_oe = oe(io_data, [50, 0, 1]);
 % THERE IS ALWAYS ONE LEADING ZERO DUE TO THE SAMPLING DELAY : DO NOT COUNT IT 
 nk = find(abs(model_oe.b(2:end)) > .1*max(abs(model_oe.b)), true, 'first'); 
 
-if isempty(nk), nk = 0; end
+if isempty(nk), nk = inf; end
 
-fprintf("\testimated delay is %d sample(s)\n", nk)
+fprintf("\testimated delay is %d sample(s)\n", nk-1)
 
-figure()
-errorshade([0:(length(model_oe.b)-1)], model_oe.b, 2*model_oe.db)
-xline(nk, 'r')
-legend('B', '$\sigma_B$ (95\% confidence)', 'delay $n_k$', 'Interpreter','latex')
+if plotting 
+    figure()
+    errorshade([0:(length(model_oe.b)-1)], model_oe.b, 2*model_oe.db)
+    xline(nk, 'r')
+    legend('B', '$\sigma_B$ (95\% confidence)', 'delay $n_k$', 'Interpreter','latex')
+end 
 
 % estimation of nb 
 model_arx_nb = cell(n-1+1, 1);
@@ -102,6 +110,9 @@ loss = cellfun(@(M) (M.EstimationInfo.LossFcn), model_arx_nb);
 [~, nb] = min(loss);
 fprintf("\torder of nb for minimum loss is %d\n", nb)
 
+% estimation of na 
+na = n;
+
 %% comparison using selstruc
 subsection 'comparison using selstruc'
 
@@ -109,7 +120,11 @@ nn = struc(1:N_max, 1:N_max, 1:N_max);
 V = arxstruc(io_data, io_data, nn);
 
 % prompt user to select the model to use
-nn = selstruc(V);
+if plotting
+    nn = selstruc(V);
+else
+    nn = [10, 10, 2];
+end
 
 if ~isempty(nn) 
     fprintf("\tselected ARX model is: [%d, %d, %d]\n", nn)
@@ -118,6 +133,11 @@ else
     return;
 end
 
+% set the selstruc model as the model to test
+% na = nn(1); 
+% nb = nn(2);
+% nk = nn(3);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 2. Parametric Identification
@@ -125,46 +145,41 @@ section 'Parametric Identification'
 
 % prepare data
 subsection 'divide data into identification / validation'
-split_idx = round(3/4*length(y));
+split_idx = round(1/2*length(y));
+% split_idx = round(3/4 * length(y));
 
 % identification data
 idt_u = u(1:split_idx);
 idt_y = detrend(y(1:split_idx),0);
-% idt_y = idt_y - idt_y(1);
 idt_data = iddata(idt_y, idt_u , Ts, 'Name', 'Flexible Link Identification', 'InputName', 'Current', 'OutputName', 'Motor Angle');
 
 % validation data
 val_u = u(split_idx+1:end);
 val_y = detrend(y(split_idx+1:end),0);
-% val_y = val_y - val_y(1);
 val_data = iddata(val_y, val_u , Ts, 'Name', 'Flexible Link Validation', 'InputName', 'Current', 'OutputName', 'Motor Angle');
 
 fprintf("\tdone\n")
 
-% other parametric models 
-subsection 'compare other parametric models '
+%% other parametric models 
+subsection 'create other parametric models '
 
-na = nn(1);
-nb = nn(2);
-nk = nn(3);
+% set unset orders for parametric models
 nc = na;
 nd = na;
 nf = na;
-% na = 4;
-% nb = 4;
-% nk = 1;
-% nc = na;
-% nd = na;
-% nf = na;
 
-
+% create parametric models 
 model_arx    = arx(idt_data, [na, nb, nk]);
-% model_iv4    = iv4(idt_data, [na, nb, nk], iv4Options('EnforceStability', true));
+% model_iv4    = iv4(idt_data, [na, nb, nk], iv4Options('EnforceStability', true)); % this causes mysterious toolbox errors
 model_iv4    = iv4(idt_data, [na, nb, nk]);
 model_armax  = armax(idt_data, [na, nb, nc, nk]);
 model_oe     = oe(idt_data, [nb, nf, nk]);
 model_bj     = bj(idt_data, [nb, nc, nd, nf, nk]);
 model_n4sid  = n4sid(idt_data, n);
+
+% prepare for plotting 
+models = {model_arx, model_iv4, model_armax, model_oe, model_bj, model_n4sid};
+titles = ["ARX", "IV4", "ARMAX", "OE", "BJ", "N4SID"];
 
 fprintf("\tdone\n")
 
@@ -173,35 +188,69 @@ fprintf("\tdone\n")
 %% 3. Model Validation 
 section 'Model Validation'
 
+%% compare models in the time domain
+subsection 'compare models in time domain'
 
-%% compare 
-subsection 'compare'
+if plotting 
+    fig = figure('Name', 'Simulated Response'); 
+    compare(val_data, models{:})
+    fig.Children(3).String{1} = 'Flexible Link Validation';
+    for i = 1:length(models)
+        fig.Children(3).String{1+i} = titles(i);
+    end
+    fprintf("\tdone\n")
+else 
+    [~, FIT, ~] = compare(val_data, models{:});
+    fprintf("\t%s\n", sprintcells('%s : %4.1f%%', {titles{:}}, FIT));
+end 
 
-figure(); 
-compare(val_data, ...
-        model_arx, ...
-        model_iv4, ...
-        model_armax, ...
-        model_oe, ...
-        model_bj, ...
-        model_n4sid) 
-fprintf("\tdone\n")
 
-%% frequency response 
-subsection 'frequency response'
+%% compare models in the frequency domain
+subsection 'compare models in frequency domain'
 
-model_spa = spa(idt_data);
+% spectrum of the validation data using a large Hann window
+model_spa = spa(val_data, 1000); % manually change the Hann used to length M
 
-fig = figure(); 
-compare(model_spa, ...
-        model_arx, ...
-        model_iv4, ...
-        model_armax, ...
-        model_oe, ...
-        model_bj, ...
-        model_n4sid) 
-fig.Children(3).String{1} = 'Flexible Link Validation (Motor Angle)';
+if plotting 
+    fig = figure('Name', 'Frequency Response'); 
+    compare(model_spa, models{:}) 
+    fig.Children(3).String{1} = 'Flexible Link Validation';
+    for i = 1:length(models)
+        fig.Children(3).String{1+i} = titles(i);
+    end
+    fprintf("\tdone\n")
+else 
+    [~, FIT, ~] = compare(model_spa, models{:});
+    fprintf("\t%s\n", sprintcells('%s : %4.1f%%', {titles{:}}, FIT));
+end 
 
-fprintf("\tdone\n")
+
+
+%% check whiteness of residuals 
+subsection 'check whiteness of residuals'
+
+if plotting 
+    figure('Name', 'Residuals')
+    resid(val_data, models{:})
+    legend(titles)
+    
+%     for i = 1:length(models)
+%         figure('Name', titles{i});
+%         resid(val_data, models{i});
+%     end 
+else 
+    is_OK = cell(size(models));
+    for i = 1:length(models)
+        [~, R] = resid(val_data, models{i});
+        Rnorm  = R(:,1,1)./max(R(:,1,1));
+        e      = std(Rnorm);
+        if any(abs(Rnorm(2:end)) > 2*e)
+            is_OK{i} = "not OK";
+        else 
+            is_OK{i} = "OK";
+        end
+    end 
+    fprintf("\t%s\n", sprintcells('%s is %s', {titles{:}}, is_OK));
+end 
 
 

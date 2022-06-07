@@ -136,7 +136,7 @@ make_fig([],[],[],"SVD of Q")
 scatter(1:r, svd(Q), "filled")
 xline(n, 'r')
 legend("singular values", sprintf("rank=%d", n))
-fprintf("The estimated rank is %d\n", n)
+fprintf("\tThe estimated rank is %d\n", n)
 
 % extended observability matrix
 O = Q(:,1:n); 
