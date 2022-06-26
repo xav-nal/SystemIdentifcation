@@ -39,13 +39,14 @@ end
 %% ---------------------------------
 subsection Visialization
 
-figure("Name","Frequency Response")
+fig = make_fig([],[],[], "Frequency Response");
 h = bodeplot(freq_model, 'r');
 setoptions(h, ...
            'FreqUnits', 'Hz', ...
            'PhaseUnits', 'Rad', ...
            'Grid', 'on', ...
            'ConfidenceRegionNumberSD', 2)
-title("Frequency Response")
 legend("identified freq. resp.", 'location', 'best')
-grid on
+
+drawnow
+saveas(fig, 'img/2_frequency_response.png')
