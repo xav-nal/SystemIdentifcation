@@ -32,7 +32,7 @@ saveas(fig, "img/31_order_estimation.png")
 %% ---------------------------------
 subsection Global Order Validation
 
-for i = n:n+1
+for i = n-1:n+1
     model_armax = armax(io_data, [i, i, i, 1]);
 
     fig = make_fig([], [], [], sprintf("ARMAX order %d Zeroes/Poles", i));
@@ -51,7 +51,7 @@ fprintf("\tplease check the figures for Zero/Pole cancellation\n")
 subsection Delay Estimation
 
 % make FIR using output error model
-model_oe = oe(io_data, [50, 0, 1]);
+model_oe = oe(io_data, [100, 0, 1]);
 
 % find the delay using the impulse response  
 nk = find(abs(model_oe.b) > .1*max(abs(model_oe.b)), true, 'first')-1; 
@@ -65,6 +65,7 @@ fig = make_fig([], [], [], "Delay Estimation");
 errorshade(0:(length(model_oe.b)-1), model_oe.b, 2*model_oe.db)
 xline(nk, 'r')
 legend('B$_{oe}$', '$\sigma_B$ (95\% confidence)', sprintf('delay $n_k$ = %d', nk), 'Interpreter','latex')
+legend('location', 'best')
 xlabel("samples [k]"), ylabel(sprintf('y [%s]', io_data.OutputUnit{1}))
 
 drawnow
