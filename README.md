@@ -29,9 +29,9 @@ The objective of the computer exercise sessions is to implement different algori
 
 <!-- CONTACT -->
 ## Contact
-Biselx Michael - michael.biselx@epfl.ch    <br />
-[greglcrx](https://github.com/greglcrx)    <br />
-[xav-nal](https://github.com/xav-nal)      <br />
+Gregoire Lacroix - gregoire.lacroix@epfl.ch [greglcrx](https://github.com/greglcrx)    <br />
+Biselx Michael - michael.biselx@epfl.ch     [mbislex](https://github.com/mbiselx)      <br />
+Xavier Nal - xavier.nal@epfl.ch             [xav-nal](https://github.com/xav-nal)      <br />
 
 
 Project Link: [https://github.com/mbiselx/SystemIdentifcation](https://github.com/mbiselx/SystemIdentifcation)
